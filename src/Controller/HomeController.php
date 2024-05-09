@@ -4,6 +4,8 @@ namespace App\Controller;
 
 use App\Entity\City;
 use App\Entity\Country;
+use App\Repository\CityRepository;
+use App\Repository\CountryRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -20,11 +22,17 @@ class HomeController extends AbstractController
             ->add('name', TextType::class)
             ->add('country', EntityType::class, [
                 'class' => Country::class,
-                'choice_label' => 'name'
+                'placeholder' => 'Please choose a country',
+                'choice_label' => 'name',
+                'query_builder' => fn(CountryRepository $countryRepository) => $countryRepository->createQueryBuilder('c')->orderBy('c.name','ASC')
             ])
             ->add('city', EntityType::class, [
                 'class' => City::class,
-                'choice_label' => 'name'
+                'choice_label' => 'name',
+                'placeholder' => 'Please choose a city',
+                'disabled' => true,
+                'query_builder' => fn(CityRepository $cityRepository) => $cityRepository->createQueryBuilder('c')->orderBy('c.name','ASC')
+                
             ])
             ->add('message', TextareaType::class)
             ->getForm()
