@@ -25,9 +25,16 @@ class Country
     #[ORM\OneToMany(targetEntity: City::class, mappedBy: 'country', orphanRemoval: true)]
     private Collection $cities;
 
+    /**
+     * @var Collection<int, Ticket>
+     */
+    #[ORM\OneToMany(targetEntity: Ticket::class, mappedBy: 'country', orphanRemoval: true)]
+    private Collection $tickets;
+
     public function __construct()
     {
         $this->cities = new ArrayCollection();
+        $this->tickets = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -81,4 +88,34 @@ class Country
     {
         return $this->getName();
     }*/
+
+   /**
+     * @return Collection<int, Ticket>
+     */
+    public function getTickets(): Collection
+    {
+        return $this->tickets;
+    }
+
+    public function addTicket(Ticket $ticket): static
+    {
+        if (!$this->tickets->contains($ticket)) {
+            $this->tickets->add($ticket);
+            $ticket->setCountry($this);
+        }
+
+        return $this;
+    }
+
+    public function removeTicket(Ticket $ticket): static
+    {
+        if ($this->tickets->removeElement($ticket)) {
+            // set the owning side to null (unless already changed)
+            if ($ticket->getCountry() === $this) {
+                $ticket->setCountry(null);
+            }
+        }
+
+        return $this;
+    }
 }

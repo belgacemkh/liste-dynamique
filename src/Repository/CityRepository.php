@@ -3,8 +3,9 @@
 namespace App\Repository;
 
 use App\Entity\City;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use App\Entity\Country;
 use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 
 /**
  * @extends ServiceEntityRepository<City>
@@ -14,6 +15,16 @@ class CityRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, City::class);
+    }
+
+    public function findByCountryOrderedByAscName(Country $country): array
+    {
+        return $this->createQueryBuilder('c')
+            ->andWhere('c.country = :country')
+            ->setParameter('country', $country)
+            ->orderBy('c.name', 'ASC')
+            ->getQuery()
+            ->getResult();
     }
 
     //    /**

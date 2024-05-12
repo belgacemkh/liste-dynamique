@@ -2,27 +2,38 @@
 
 namespace App\Controller;
 
+use App\Entity\Ticket;
+use App\Entity\Country;
 use App\Form\TicketFormType;
-use App\Repository\CountryRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 
 class HomeController extends AbstractController
 {
     #[Route('/', name: 'app_home')]
-    public function index(Request $request, CountryRepository $country): Response
+    public function index(Request $request, EntityManagerInterface $em): Response
     {
-        $form = $this->createForm(TicketFormType::class,['country' => $country->find(3)]);
-          
-      
+        $countryRepository = $em->getRepository(Country::class);
+        $france = $countryRepository->find(1); 
+        
+        $ticket = new Ticket;
+        $ticket->setCountry($france);
+        
+        $form = $this->createForm(TicketFormType::class, $ticket);
+
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            dd('toto');
+            $em->persist($ticket);
+            $em->flush();
+
+            $this->addFlash('success', 'Thanks for your message. We\'ll get back to you shortly.');
+            return $this->redirectToRoute('app_home');
         }
 
-        return $this->render('home.index.html.twig', compact('form'));
+        return $this->render('home.html.twig', compact('form'));
     }
 }

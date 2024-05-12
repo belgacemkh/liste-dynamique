@@ -4,67 +4,71 @@ namespace App\Form;
 
 use App\Entity\City;
 use App\Entity\Country;
+use App\Entity\Ticket;
 use App\Repository\CityRepository;
 use App\Repository\CountryRepository;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
-use Symfony\Component\Validator\Constraints\Length;
-use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Form\FormEvent;
+use Symfony\Component\Form\FormEvents;
+use Symfony\Component\Form\FormInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 
 class TicketFormType extends AbstractType
 {
-
     public function __construct(private CityRepository $cityRepository){}
-    
-    public function buildForm(FormBuilderInterface $builder, array $options): void
+
+    public function buildForm(FormBuilderInterface $builder, array $options)
     {
         $builder
-        ->add('name', TextType::class, [
-            'constraints' => new NotBlank(['message' => 'Please enter your name'])
-        ])
-        ->add('country', EntityType::class, [
-            'class' => Country::class,
-            'placeholder' => 'Please choose a country',
-            'choice_label' => 'name',
-            'query_builder' => fn (CountryRepository $countryRepository) => $countryRepository->findAllOrderByNameQueryBuilder(),
-            'constraints' => new NotBlank(['message' => 'Please choose a country'])
-        ])
-        ->add('message', TextareaType::class, [
-            'constraints' => [
-                new NotBlank(['message' => 'Seems like your issues has been resolved :)']),
-                new Length(['min' => 5]),
-            ]
-        ])
-        ->addEventListener(FormEvents:: PRE_SET_DATA, function(FormEvent $event){
-
-            $country = $event->getData()['country'] ?? null;
-
-            $cities = $country === null ? [] : $this->cityRepository->findByCountry($country, ['name' => 'ASC']);
-       
-            $event->getForm()->add('city', EntityType::class, [
-                'class' => City::class,
+            ->add('name')
+            ->add('message', null, [
+                'attr' => ['rows' => 5]
+            ])
+            ->add('country', EntityType::class, [
+                'class' => Country::class,
                 'choice_label' => 'name',
-                'choices' => $cities,
-                'disabled' => $country === null,
-                'placeholder' => 'Please choose a city',
-                'constraints' => new NotBlank(['message' => 'Please choose a city'])
+                'placeholder' => 'Choose a country',
+                'query_builder' => fn (CountryRepository $countryRepository) =>
+                $countryRepository->findAllOrderedByAscNameQueryBuilder()
             ]);
 
+        $formModifier = function (FormInterface $form, Country $country = null) {
+            $cities = $country === null ? [] : $this->cityRepository->findByCountryOrderedByAscName($country);
 
-        })
-        ;
+            $form->add('city', EntityType::class, [
+                'class' => City::class,
+                'choice_label' => 'name',
+                'disabled' => $country === null,
+                'placeholder' => 'Choose a city',
+                'choices' => $cities
+            ]);
+        };
+
+        $builder->addEventListener(
+            FormEvents::PRE_SET_DATA,
+            function (FormEvent $event) use ($formModifier) {
+                $data = $event->getData();
+
+                $formModifier($event->getForm(), $data->getCountry());
+            }
+        );
+
+        $builder->get('country')->addEventListener(
+            FormEvents::POST_SUBMIT,
+            function (FormEvent $event) use ($formModifier) {
+                $country = $event->getForm()->getData();
+
+                $formModifier($event->getForm()->getParent(), $country);
+            }
+        );
     }
 
-    public function configureOptions(OptionsResolver $resolver): void
+    public function configureOptions(OptionsResolver $resolver)
     {
         $resolver->setDefaults([
-            // Configure your form options here
+            'data_class' => Ticket::class,
         ]);
     }
 }
